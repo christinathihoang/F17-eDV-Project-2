@@ -1,0 +1,83 @@
+---
+title: "Project 2"
+author: "Victor"
+resource_files:
+- token.renviron
+- .Renviron
+output:
+  html_notebook:
+    code_folding: hide
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+runtime: shiny
+---
+```{r setup, include=FALSE}
+
+library(tidyverse)
+library(data.world)
+library(shiny)
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE)
+```
+  
+```{r}
+project <- "https://data.world/christinahoang/f-17-edv-project-1/"
+data.world::set_config(cfg_env("DW_API"))
+df_race <- data.world::query(data.world::qry_sql("SELECT * FROM mean_sat_score_by_race"), dataset = project)
+sections = df_race %>% dplyr::distinct(section)
+df_state <- data.world::query(data.world::qry_sql("SELECT * FROM mean_sat_score_by_state"), dataset = project)
+years = df_state %>% dplyr::distinct(year)
+sections2 = df_state %>% dplyr::distinct(section)
+```
+## **Quick glance at the data**
+```{r}
+summary(df_race)
+summary(df_state)
+```
+## **One Green Thing with No Aggregate Measures - Boxplot**
+```{r}
+inputPanel(
+  selectInput("selectSection", label = "Select section",
+              choices = sections, multiple=TRUE, selected="Mathematics"),
+  sliderInput("scoreMin", label = "Select Minimum Score",
+              min = 400, max = 600, value = 400, step = 1),
+  sliderInput("scoreMax", label = "Select Maximum Score",
+              min = 400, max = 600, value = 600, step = 1)
+)
+
+renderPlot({
+  df_race %>% dplyr::filter(section == input$selectSection) %>% ggplot() + geom_boxplot(mapping = aes(x=race_ethnicity, y=mean_score, colour=race_ethnicity)) +
+geom_point(mapping = aes(x=race_ethnicity, y=mean_score, colour=race_ethnicity))+
+theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+ylim(input$scoreMin, input$scoreMax)
+})
+```
+From the boxplot of section 'Methametics', we see that Asian/Pacific Islanders always perform the best. From the boxplot of section 'Writing', we see that White students still rules the subject, while Asian/Pacific Islanders are having a giant leap and getting closer to White students
+
+## **One Green Thing with Aggregate Measures - Histogram**
+```{r}
+inputPanel(
+  selectInput("selectYear", label = "Select year",
+              choices = years, multiple=TRUE, selected="2015"),
+  selectInput("selectSection2", label = "Select section2",
+              choices = sections2, multiple=TRUE, selected="Mathematics")
+  
+)
+
+renderPlot({
+  df_state %>% dplyr::filter(year == input$selectYear) %>% dplyr::filter(section == input$selectSection2) %>% ggplot() + geom_histogram(mapping = aes(x=percent_taking),binwidth = 10,fill='blue',color='black') 
+})
+```
+From the histogram of percentage of high school graduating seniors taking Mathematics in SAT from different states in 2015, we can see that it is pretty shocking to see that in 19 states, more than 90% of high school graduating seniors choose not to take SAT. This indicates that in America going to college is not the best way or the only way to make future life decent. Also, in America, higher education is not meant for most of people. Delaware, Maine and Idaho have more than 90% of high school graduates choose to take SAT. These may indicates the higher education encouragement policy in those states.
+```{r}
+inputPanel(
+  selectInput("selectYear2", label = "Select year2",
+              choices = years, multiple=TRUE, selected="2015")
+)
+renderPlot({
+  df_state %>% dplyr::filter(year == input$selectYear2)  %>% ggplot() + geom_histogram(mapping = aes(x=mean_score),binwidth = 10,fill='blue',color='black') 
+})
+
+```
+By looking at the the average SAT scores was growing in year 1995, 2000, 2005, but suffers from declining in year 2010 and 2013, even year 2015 didn't reach the toppest level of 2005. This may because the SAT exams are become more difficult in recent years.
