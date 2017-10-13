@@ -1,0 +1,72 @@
+---
+title: "Bryan's Project Interactive Document"
+author: "Bryan Xiao"
+resource_files:
+- .Renviron
+output:
+  html_notebook:
+    code_folding: hide
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+require(data.world)
+knitr::opts_chunk$set(echo = TRUE)
+```
+  
+## **R Session Info**  
+
+```{r}
+sessionInfo()
+```
+
+## **Connecting to data.world** 
+```{r}
+project <- "https://data.world/bryan-xiao/mean-sat-scores"
+data.world::set_config(cfg_env("DW_API"))
+tables_qry <- data.world::qry_sql("SELECT * FROM mean_sat_scores_state")
+parameter_qry <- data.world::qry_sql("SELECT state, mean_score,
+                                   CASE WHEN mean_score < 500 THEN 'low'
+                                        WHEN mean_score < 600 THEN 'medium'
+                                        ELSE 'high' END AS mean_score_cat
+                                   FROM mean_sat_scores_state")
+tables_df <- data.world::query(tables_qry, dataset = project)
+parameter_df <- data.world::query(parameter_qry, dataset = project)
+#df <- data.world::query(data.world::qry_sql("SELECT * FROM diamonds limit 1000"), dataset = project)
+```
+
+## Scatterplot - Percent Taking vs Mean Score
+```{r}
+library(tidyverse)
+renderPlot({ggplot(tables_df) +
+  geom_point(mapping = aes(x=percent_taking, y=mean_score))
+})
+```
+
+## Parameters - State vs Mean Score
+```{r}
+library(tidyverse)
+renderPlot({ggplot(parameter_df) +
+  geom_point(mapping = aes(x=state, y=mean_score, color=mean_score_cat))
+})
+```
+
+## Histogram
+```{r histogram2}
+inputPanel(
+  sliderInput("bw_adjust2", label = "Bandwidth adjustment:",
+              min = 0.2, max = 2, value = 1, step = 0.2)
+)
+
+renderPlot({
+  hist(faithful$histogram, probability = TRUE, breaks = as.numeric(10),
+       xlab = "Duration (minutes)", main = "Geyser eruption duration")
+  
+  dens <- density(faithful$histogram, adjust = input$bw_adjust2)
+  lines(dens, col = "blue")
+})
+```
