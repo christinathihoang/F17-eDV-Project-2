@@ -1,0 +1,86 @@
+---
+title: "Christina Hoang's Project Interactive Document"
+author: "Christina Hoang"
+resource_files:
+- .Renviron
+output:
+  html_notebook:
+    code_folding: hide
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(shiny)
+require(data.world)
+knitr::opts_chunk$set(echo = TRUE)
+```
+  
+## **R Session Info**  
+
+```{r}
+sessionInfo()
+```
+
+## Introduction
+This notebook documents our insights on mean SAT scores in the United States. It includes the following data visualizations, using R's ggplot2 library:
+Boxplot
+Histogram
+Scatterplot
+Barchart
+
+## Description of the Data Set
+The National Center for Education Statistics (NCES) is the primary federal entity for collecting and analyzing data related to education in the U.S. and other nations. NCES is located within the U.S. Department of Education and the Institute of Education Sciences. NCES fulfills a Congressional mandate to collect, collate, analyze, and report complete statistics on the condition of American education; conduct and publish reports; and review and report on education activities internationally.
+
+mean_sat_scores_sex: SAT mean scores of college-bound seniors, by sex: 1966-67 through 2014-15
+mean_sat_scores_race: SAT mean scores of college-bound seniors, by race/ethnicity: Selected years, 1986-87 through 2014-15
+mean_sat_scores_state: Mean SAT scores of college-bound seniors and percentage of graduates taking SAT, by state: Selected years, 1995-96 through 2014-15
+
+## **Connecting to data.world** 
+```{r}
+project <- "https://data.world/bryan-xiao/mean-sat-scores"
+data.world::set_config(cfg_env("DW_API"))
+df_state <- data.world::query(data.world::qry_sql("SELECT * FROM mean_sat_scores_state"), dataset = project)
+df_sex <- data.world::query(data.world::qry_sql("SELECT * FROM mean_sat_scores_sex"), dataset = project)
+section = df_sex %>% dplyr::distinct(section)
+year = df_state %>% dplyr::distinct(year)
+
+```
+
+## Histogram - Mean Score vs Sex
+By creating a histogram from the mean SAT score and analyzing the data by each sex, a correlation between sex and mean SAT scores was observed. The distribution of the scores of females tend to be in the middle, indicating that a large majority of female score around a 500 on each section for the SAT. In contrast, males tend to score on the higher end, but scores are much more spread out.
+
+Using the same histogram story that analyzes the correlation between sex and mean SAT scores, I further analyzed the data to answer the question if a certain sex tended to perform better on each section. It can be observed that males have a higher mean in mathematics while females perform better on writing. Mean scores are similar for critical reading. There is a significant difference in mathematics as all mean scores for males were significantly higher than those for females. The opposite is true for writing although the gap difference in scores is not as severe.
+```{r}
+library(tidyverse)
+library(shiny)
+inputPanel(
+  selectInput("section", label = "Select Section:", choices = section,
+              selected = "Mathematics")
+)
+
+renderPlot({
+  ggplot(df_sex, mapping = aes(mean_score)) + 
+    geom_bar() + facet_wrap(~sex)
+})
+```
+
+## Bar Charts - Mean Score vs State
+Looking at the mean SAT score of each state throughout the years, it can be observed that the calculated difference from the overall national average doesn't really change. States that generally underperform continue to do so.
+
+From 2005 to 2010, many states had a decreased average SAT score in each section. This could be a result of education budget slashing in the recent years. However, it could also be a result of the SAT gradually increasing difficulty.
+```{r}
+library(tidyverse)
+library(shiny)
+inputPanel(
+  selectInput("year", label = "Select Year:", choices = year,
+              selected = "1995")
+)
+renderPlot({
+  ggplot(df_state) + geom_col(mapping = aes(x=mean_score, y=state, color = section))
+})
+'''

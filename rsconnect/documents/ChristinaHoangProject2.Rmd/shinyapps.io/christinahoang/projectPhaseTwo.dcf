@@ -1,0 +1,12 @@
+name: projectPhaseTwo
+title:
+username:
+account: christinahoang
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 225037
+bundleId: 1026136
+url: https://christinahoang.shinyapps.io/projectPhaseTwo/
+when: 1507943049.38263
+asMultiple: FALSE
+asStatic: FALSE
