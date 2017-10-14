@@ -24,6 +24,9 @@ knitr::opts_chunk$set(echo = TRUE)
 sessionInfo()
 ```
 
+## Github link
+https://github.com/christinathihoang/F17-eDV-Project-2
+
 ## **Connecting to data.world** 
 ```{r}
 project <- "https://data.world/bryan-xiao/mean-sat-scores"
@@ -36,16 +39,45 @@ parameter_qry <- data.world::qry_sql("SELECT state, mean_score,
                                    FROM mean_sat_scores_state")
 tables_df <- data.world::query(tables_qry, dataset = project)
 parameter_df <- data.world::query(parameter_qry, dataset = project)
+
+project1 <- "https://data.world/christinahoang/f-17-edv-project-1/"
+data.world::set_config(cfg_env("DW_API"))
+df_race <- data.world::query(data.world::qry_sql("SELECT * FROM mean_sat_score_by_race"), dataset = project1)
+sections = df_race %>% dplyr::distinct(section)
+df_state <- data.world::query(data.world::qry_sql("SELECT * FROM mean_sat_score_by_state"), dataset = project1)
+df_state_agg <- data.world::query(data.world::qry_sql("SELECT state, year, SUM(mean_score) AS mean_score_agg FROM mean_sat_scores_state"), dataset = project)
+years = df_state %>% dplyr::distinct(year)
+sections2 = df_state %>% dplyr::distinct(section)
+df_sex <- data.world::query(data.world::qry_sql("SELECT * FROM mean_sat_scores_sex"), dataset = project)
+section = df_sex %>% dplyr::distinct(section)
+year = df_state %>% dplyr::distinct(year)
 #df <- data.world::query(data.world::qry_sql("SELECT * FROM diamonds limit 1000"), dataset = project)
 ```
+
+## Introduction
+This notebook documents our insights on mean SAT scores in the United States. It includes the following data visualizations, using R's ggplot2 library:
+Boxplot
+Histogram
+Scatterplot
+Barchart
+
+## Description of the Data Set
+The National Center for Education Statistics (NCES) is the primary federal entity for collecting and analyzing data related to education in the U.S. and other nations. NCES is located within the U.S. Department of Education and the Institute of Education Sciences. NCES fulfills a Congressional mandate to collect, collate, analyze, and report complete statistics on the condition of American education; conduct and publish reports; and review and report on education activities internationally.
+
+mean_sat_scores_sex: SAT mean scores of college-bound seniors, by sex: 1966-67 through 2014-15
+mean_sat_scores_race: SAT mean scores of college-bound seniors, by race/ethnicity: Selected years, 1986-87 through 2014-15
+mean_sat_scores_state: Mean SAT scores of college-bound seniors and percentage of graduates taking SAT, by state: Selected years, 1995-96 through 2014-15
+
 
 ## Scatterplot - Percent Taking vs Mean Score
 ```{r}
 library(tidyverse)
 renderPlot({ggplot(tables_df) +
-  geom_point(mapping = aes(x=percent_taking, y=mean_score))
+  geom_point(mapping = aes(x=percent_taking, y=mean_score)) +
+  geom_smooth(mapping = aes(x=percent_taking, y=mean_score), se = FALSE)
 })
 ```
+This is a graph of mean scores as a dependent variable of percent taking. As we can see from the graph, the less people who take the test correlates with a higher score. This could indicate that the states who have less people taking the test have higher education standards for those who do actually take the test.
 
 ## Parameters - State vs Mean Score
 ```{r}
@@ -54,19 +86,101 @@ renderPlot({ggplot(parameter_df) +
   geom_point(mapping = aes(x=state, y=mean_score, color=mean_score_cat))
 })
 ```
+This scatterplot divides mean scores into three different categories: high, medium, and low. The scatterplot is further divided by state and color is set according to the three categories.
 
 ## Histogram
 ```{r histogram2}
 inputPanel(
-  sliderInput("bw_adjust2", label = "Bandwidth adjustment:",
-              min = 0.2, max = 2, value = 1, step = 0.2)
+  sliderInput("bw_adjust", label = "Bin adjustment:",
+              min = 5, max = 15, value = 1, step = 0.2)
 )
 
 renderPlot({
-  hist(faithful$histogram, probability = TRUE, breaks = as.numeric(10),
-       xlab = "Duration (minutes)", main = "Geyser eruption duration")
+  hist(parameter_df$mean_score, probability = TRUE, breaks = as.numeric(input$bw_adjust),
+       xlab = "mean score", main = "Mean scores by state")
   
-  dens <- density(faithful$histogram, adjust = input$bw_adjust2)
+  dens <- density(parameter_df$mean_score, adjust = 1)
   lines(dens, col = "blue")
+})
+```
+Here we have a histogram that we can adjust the amount of bins for. The bins measure an amount of mean scores within its range, and by readjusting the amount of bins we can get a more in-depth look at the distribution of mean scores.
+
+## Quick glance at the data
+```{r}
+summary(df_race)
+summary(df_state)
+```
+## **One Green Thing with No Aggregate Measures - Boxplot**
+```{r}
+inputPanel(
+  selectInput("selectSection", label = "Select section",
+              choices = sections, multiple=TRUE, selected="Mathematics")
+)
+
+renderPlot({
+  df_race %>% dplyr::filter(section == input$selectSection) %>% ggplot() + geom_boxplot(mapping = aes(x=race_ethnicity, y=mean_score, colour=race_ethnicity)) +
+geom_point(mapping = aes(x=race_ethnicity, y=mean_score, colour=race_ethnicity))+
+theme(axis.text.x = element_text(angle = 90, hjust = 1))
+})
+```
+From the boxplot of section 'Methametics', we see that Asian/Pacific Islanders always perform the best. From the boxplot of section 'Writing', we see that White students still rules the subject, while Asian/Pacific Islanders are having a giant leap and getting closer to White students
+
+## **One Green Thing with Aggregate Measures - Histogram**
+```{r}
+inputPanel(
+  selectInput("selectYear", label = "Select year",
+              choices = years, multiple=TRUE, selected="2015"),
+  selectInput("selectSection2", label = "Select section2",
+              choices = sections2, multiple=TRUE, selected="Mathematics")
+  
+)
+
+renderPlot({
+  df_state %>% dplyr::filter(year == input$selectYear) %>% dplyr::filter(section == input$selectSection2) %>% ggplot() + geom_histogram(mapping = aes(x=percent_taking),binwidth = 10,fill='blue',color='black') 
+})
+```
+From the histogram of percentage of high school graduating seniors taking Mathematics in SAT from different states in 2015, we can see that it is pretty shocking to see that in 19 states, more than 90% of high school graduating seniors choose not to take SAT. This indicates that in America going to college is not the best way or the only way to make future life decent. Also, in America, higher education is not meant for most of people. Delaware, Maine and Idaho have more than 90% of high school graduates choose to take SAT. These may indicates the higher education encouragement policy in those states.
+```{r}
+inputPanel(
+  selectInput("selectYear2", label = "Select year2",
+              choices = years, multiple=TRUE, selected="2015")
+)
+renderPlot({
+  df_state %>% dplyr::filter(year == input$selectYear2)  %>% ggplot() + geom_histogram(mapping = aes(x=mean_score),binwidth = 10,fill='blue',color='black') 
+})
+
+```
+By looking at the the average SAT scores was growing in year 1995, 2000, 2005, but suffers from declining in year 2010 and 2013, even year 2015 didn't reach the toppest level of 2005. This may because the SAT exams are become more difficult in recent years.
+## Histogram - Mean Score vs Sex
+By creating a histogram from the mean SAT score and analyzing the data by each sex, a correlation between sex and mean SAT scores was observed. The distribution of the scores of females tend to be in the middle, indicating that a large majority of female score around a 500 on each section for the SAT. In contrast, males tend to score on the higher end, but scores are much more spread out.
+
+Using the same histogram story that analyzes the correlation between sex and mean SAT scores, I further analyzed the data to answer the question if a certain sex tended to perform better on each section. It can be observed that males have a higher mean in mathematics while females perform better on writing. Mean scores are similar for critical reading. There is a significant difference in mathematics as all mean scores for males were significantly higher than those for females. The opposite is true for writing although the gap difference in scores is not as severe.
+```{r}
+library(tidyverse)
+library(shiny)
+inputPanel(
+  selectInput("section", label = "Select Section:", choices = section,
+              selected = "Mathematics")
+)
+
+renderPlot({
+  ggplot(df_sex, mapping = aes(mean_score)) + 
+    geom_bar() + facet_wrap(~sex)
+})
+```
+
+## Bar Charts - Mean Score vs State
+Looking at the mean SAT score of each state throughout the years, it can be observed that the calculated difference from the overall national average doesn't really change. States that generally underperform continue to do so.
+
+From 2005 to 2010, many states had a decreased average SAT score in each section. This could be a result of education budget slashing in the recent years. However, it could also be a result of the SAT gradually increasing difficulty.
+```{r}
+library(tidyverse)
+library(shiny)
+inputPanel(
+  selectInput("year", label = "Select Year:", choices = year,
+              selected = "1995")
+)
+renderPlot({
+  ggplot(df_state) + geom_col(mapping = aes(x=mean_score, y=state, color = section))
 })
 ```
